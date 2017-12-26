@@ -9,7 +9,7 @@ The players with the **CHANGEMAP** flag can use the command `!adminroom` to tele
   - `!adminroom` - *_Admin room menu (**CHANGEMAP FLAG**)._*
   - `!findadminroom` - *_Admin room menu (**CHANGEMAP FLAG**)._*
   
-### FEATURE
+### Features
   - find automatically admin room
   - Remember old postion
   - Very easy to navigate with the menu.
@@ -39,7 +39,7 @@ It works on most maps perfectly.
   - ze_shroomforest2_p6 - Works but some buttons do not show up  
     
 It should work on all maps that have admin room, otherwise [contact me.](https://github.com/IT-KiLLER/HOW-TO-CONTACT-ME)
-I would appreciate if you can leave comments on [alliedmods](https://forums.alliedmods.net/) with maps that work or maps that do not work properly.
+I would appreciate if you can leave comments on [alliedmods](https://forums.alliedmods.net/showthread.php?p=2568235) with maps that work or maps that do not work properly.
 
 ## Creator and credit
 #### Created by me [IT-KiLLER](https://github.com/IT-KiLLER)
