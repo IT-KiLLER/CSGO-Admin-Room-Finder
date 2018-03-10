@@ -1,5 +1,5 @@
 
-/*	Copyright (C) 2017 IT-KiLLER
+/*	Copyright (C) 2018 IT-KiLLER
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
 	the Free Software Foundation, either version 3 of the License, or
@@ -15,6 +15,8 @@
 
 #include <sdktools>
 #include <colors_csgo>
+#include <regex>
+#include <outputinfo>
 
 #pragma semicolon 1
 #pragma newdecls required
@@ -23,11 +25,11 @@
 #define STEP 4.0
 #define RADIUSSIZE 40.0
 
-int d_MaxIndex;
+int dArraySize;
 int g_ArrayEntity[4096];
 bool bUpdateEntities = true;
 float playerOrgin[MAXPLAYERS+1][3];
-char containsArray[][10] = {"admin", "stage", "level", "lvl", "extreme", "ex1", "ex2", "ex3", "ex4", "round", "kill", "restart"};
+char containsArray[][10] = {"admin", "stage", "level", "lvl", "act", "extreme", "ex1", "ex2", "ex3", "ex4", "round", "kill", "restart"};
 int menuSelected[MAXPLAYERS+1];
 Menu menuHandle[MAXPLAYERS+1];
 
@@ -38,10 +40,10 @@ float Ground_Velocity[3] = {0.0, 0.0, -300.0};
 
 public Plugin myinfo =
 {
-	name = "[CS:GO] ADMIN ROOM FINDER",
+	name = "[CS:GO] Admin Room Finder",
 	author = "IT-KILLER",
 	description = "You can easily navigate to the admin room.",
-	version = "1.0",
+	version = "1.1",
 	url = "https://github.com/IT-KiLLER"
 };
 
@@ -50,7 +52,6 @@ public void OnPluginStart()
 	RegAdminCmd("sm_adminroom", Command_AdminRoom, ADMFLAG_CHANGEMAP, "The command opens the admin room menu");
 	RegAdminCmd("sm_findadminroom", Command_AdminRoom, ADMFLAG_CHANGEMAP, "The command opens the admin room menu");
 	HookEvent("round_start", EventRoundStart, EventHookMode_PostNoCopy);
-	bUpdateEntities = true;
 }
 
 public void EventRoundStart(Event event, const char[] name, bool dontBroadcast)
@@ -58,20 +59,16 @@ public void EventRoundStart(Event event, const char[] name, bool dontBroadcast)
 	bUpdateEntities = true;
 	for(int client = 1; client <= MaxClients; client++)
 	{
-		OnClientDisconnect_Post(client);
+		OnClientDisconnect(client);
 	}
 }
 
 public void OnMapStart()
 {
 	bUpdateEntities = true;
-	for(int client = 1; client <= MaxClients; client++)
-	{
-		OnClientDisconnect_Post(client);
-	}
 }
 
-public void OnClientDisconnect_Post(int client)
+public void OnClientDisconnect(int client)
 {
 	playerOrgin[client][0] = 0.0;
 	playerOrgin[client][1] = 0.0;
@@ -87,24 +84,25 @@ stock void UpdateEntitiesList()
 	if(!bUpdateEntities) return;
 
 	bUpdateEntities = false;
-	d_MaxIndex = 1;
-	int entity = -1;
-	int entityNear = -1;
+	dArraySize = 0;
 
-	float entityPosition[3];
-	float entityPositionNear[3];
+	int entity = -1, entityNear = -1;
+	bool loop;
+	float entityPosition[3], entityPositionNear[3];
 	float distance = 0.0;
-	bool checkLoop;
+
+	entity = -1;
 	while((entity = FindEntityByClassname(entity, "func_button")) != -1)
 	{
 		if(!logicalButtonMatch(entity)) continue;
 
 		GetEntPropVector(entity, Prop_Send, "m_vecOrigin", entityPosition);
-		checkLoop = true;
+		loop = true;
 		entityNear = -1;
-		while((entityNear = FindEntityByClassname(entityNear, "func_button")) != -1 && checkLoop)
+
+		while((entityNear = FindEntityByClassname(entityNear, "func_button")) != -1 && loop)
 		{
-			if(entity!=entityNear && logicalButtonMatch(entityNear))
+			if(entity != entityNear && logicalButtonMatch(entityNear))
 			{
 				GetEntPropVector(entityNear, Prop_Send, "m_vecOrigin", entityPositionNear);
 				distance = GetVectorDistance(entityPosition, entityPositionNear, false);
@@ -112,30 +110,39 @@ stock void UpdateEntitiesList()
 				{	
 					if(POSITIVE(entityPosition[0] - entityPositionNear[0]) < 40.00)
 					{
-						g_ArrayEntity[d_MaxIndex++] = entity;
-						checkLoop = false;
+						//PrintToChatAll("0: %f : distance %f" , POSITIVE(entityPosition[0] - entityPositionNear[0]), distance);
+						g_ArrayEntity[dArraySize++] = entity;
+						loop = false;
 					}
 					else if(POSITIVE(entityPosition[1] - entityPositionNear[1]) < 40.00)
 					{
-						g_ArrayEntity[d_MaxIndex++] = entity;
-						checkLoop = false;
+						//PrintToChatAll("2: %f : distance %f" , POSITIVE(entityPosition[1] - entityPositionNear[1]), distance);
+						g_ArrayEntity[dArraySize++] = entity;
+						loop = false;
 					}
 					else if(POSITIVE(entityPosition[2] - entityPositionNear[2]) < 40.00)
 					{
-						g_ArrayEntity[d_MaxIndex++] = entity;
-						checkLoop = false;
+						//PrintToChatAll("2: %f : distance %f" , POSITIVE(entityPosition[2] - entityPositionNear[2]), distance);
+						g_ArrayEntity[dArraySize++] = entity;
+						loop = false;
 					}
 				}
 			}
 		}
 	}
+	if(dArraySize)
+	{
+		SortCustom1D(g_ArrayEntity, dArraySize, OrderByLocation);
+
+	}
 }
 
 stock bool logicalButtonMatch(int entity)
 {
-	char buffer[50];
+	char buffer[100];
 	
-	GetEntPropString(entity, Prop_Data, "m_iParent", buffer, 50);
+	GetEntPropString(entity, Prop_Data, "m_iParent", buffer, 5);
+
 	if(strlen(buffer))
 	{
 		// BAD MATCH
@@ -143,25 +150,60 @@ stock bool logicalButtonMatch(int entity)
 	}
 
 	GetEntPropString(entity, Prop_Data, "m_iName", buffer, 50);
-
-	if (strlen(buffer))
+	if(strlen(buffer))
 	{
 		for(int i = 0; i < sizeof(containsArray); i++)
 		{
 			if(StrContains(buffer, containsArray[i], false) !=-1)
 			{
-				// GOOD MATCH
+				// NICE MATCH
 				return true;
 			}
 		}
-	} 
-	else 
-	{
-		// CHANCE
-		return true;
 	}
+
+	int count = GetOutputActionCount( entity, "m_OnPressed" );
+	for( int output = 0; output < count; output++ )
+	{
+		GetOutputActionParameter( entity, "m_OnPressed", output, buffer, 100);
+
+		if(!startWith(buffer, "say")) continue;
+
+		for(int i = 0; i < sizeof(containsArray); i++)
+		{
+			if(StrContains(buffer, containsArray[i], false) != -1)
+			{
+				// NICE MATCH
+				return true;
+			}
+		}
+	}
+
 	// NO MATCH
 	return false;
+}
+
+stock int OrderByLocation(int index1, int index2, const int[] array, Handle hndl)
+{
+	float position[3];
+
+	GetEntPropVector(index1, Prop_Send, "m_vecOrigin", position);
+	float A = position[0] + position[1] + position[2];
+
+	GetEntPropVector(index2, Prop_Send, "m_vecOrigin", position);
+	float B = position[0] + position[1] + position[2];
+
+	return FloatCompare(A, B);
+}
+
+stock bool startWith(const char[] str, const char[] substr, bool caseSensitive = false)
+{
+	char pattern[125];
+	FormatEx(pattern, 125, "%s^\\s*(%s)", caseSensitive ? "" : "(?i)", substr);
+	Regex sw_regex = CompileRegex(pattern);
+	int result = MatchRegex(sw_regex, str);
+	CloseHandle(sw_regex);
+	return result > 0;
 }
 
 public Action Command_AdminRoom(int client, int args)
@@ -169,7 +211,7 @@ public Action Command_AdminRoom(int client, int args)
 	if(!client) return Plugin_Handled;
 
 	UpdateEntitiesList();
-	if(d_MaxIndex-1)
+	if(dArraySize)
 	{
 		Menu_Buttons(client);
 	}
@@ -188,24 +230,23 @@ void Menu_Buttons(int client)
 	char menu_text[32];
 	char entity_id[32];
 	char strName[56];
-
-	menu.AddItem("-1", "Your saved position.");
-
-	for(int index=1; index < d_MaxIndex; index++)
+	menu.AddItem("-1", "Get out (saved position)");
+	int entity;
+	for(int index = 0; index < dArraySize; index++)
 	{
-		if(!IsValidEntity(g_ArrayEntity[index])) continue;
-
-		GetEntPropString(g_ArrayEntity[index], Prop_Data, "m_iName", strName, sizeof(strName));
+		entity = g_ArrayEntity[index];
+		if(!IsValidEntity(entity) || !entity) continue;
+		GetEntPropString(entity, Prop_Data, "m_iName", strName, sizeof(strName));
 
 		if(!strlen(strName))
 		{
-			FormatEx(menu_text, sizeof(menu_text), "Button %d", index + 1);
+			FormatEx(menu_text, sizeof(menu_text), "Button %d", index + 2);
 		} 
 		else
 		{
 			FormatEx(menu_text, sizeof(menu_text), "%s", strName);
 		}
-		FormatEx(entity_id, sizeof(entity_id), "%d", index);
+		FormatEx(entity_id, sizeof(entity_id), "%d", entity);
 		menu.AddItem(entity_id, menu_text);
 	}
 
@@ -233,7 +274,7 @@ public int MenuHandler_buttons(Menu menu, MenuAction action, int param1, int par
 		}
 		case MenuAction_Select:
 		{
-			if(bUpdateEntities || !(d_MaxIndex-1) || menuHandle[param1] != menu)
+			if(bUpdateEntities || !(dArraySize-1) || menuHandle[param1] != menu)
 			{
 				CPrintToChat(param1, "%s {red}You used an old session. Try again.", TAG_COLOR);
 				delete menu;
@@ -242,16 +283,16 @@ public int MenuHandler_buttons(Menu menu, MenuAction action, int param1, int par
 			}
 			char option[32];
 			menu.GetItem(param2, option, sizeof(option));
-			menuSelected[param1]=param2;
+			menuSelected[param1] = param2;
 			int target = StringToInt(option);
-			if(target==0)
+			if(target == 0)
 			{
 				CPrintToChat(param1, "%s {red}An error occured.", TAG_COLOR);
 				return 0;
 			}
-			else if(target==-1)
+			else if(target == -1)
 			{
-				GoBack(param1);
+				GetOut(param1);
 			}
 			else
 			{
@@ -265,11 +306,11 @@ public int MenuHandler_buttons(Menu menu, MenuAction action, int param1, int par
 			int style;
 			char option[32];
 			menu.GetItem(param2, option, sizeof(option), style);
-			if(param2==0 && playerOrgin[param1][0]==0.0 && playerOrgin[param1][1]==0.0 && playerOrgin[param1][2]==0.0)
+			if(param2 == 0 && playerOrgin[param1][0] == 0.0 && playerOrgin[param1][1] == 0.0 && playerOrgin[param1][2] == 0.0)
 			{
 				return ITEMDRAW_DISABLED;
 			} 
-			else if(menuSelected[param1]==param2)
+			else if(menuSelected[param1] == param2)
 			{
 				return ITEMDRAW_DISABLED;
 			} 
@@ -279,9 +320,9 @@ public int MenuHandler_buttons(Menu menu, MenuAction action, int param1, int par
 	return 0;
 }
 
-stock void GoToEntity(int client, int index)
+stock void GoToEntity(int client, int entity)
 {
-	if(!IsValidEntity(g_ArrayEntity[index]))
+	if(!IsValidEntity(entity))
 	{
 		CPrintToChat(client, "%s {red}The entity has become invalid", TAG_COLOR);
 		return;
@@ -290,7 +331,7 @@ stock void GoToEntity(int client, int index)
 	float entityposition[3];
 
 	GetClientAbsOrigin(client, currentPlayerPosition);
-	GetEntPropVector(g_ArrayEntity[index], Prop_Send, "m_vecOrigin", entityposition);
+	GetEntPropVector(entity, Prop_Send, "m_vecOrigin", entityposition);
 
 	float distanceButton = GetVectorDistance(currentPlayerPosition, entityposition, false);
 	bool savedPosition = false;
@@ -302,14 +343,14 @@ stock void GoToEntity(int client, int index)
 	}
 
 	TeleportEntity(client, entityposition, NULL_VECTOR, NULL_VECTOR);
-	CPrintToChat(client, "%s {lightblue}You have been brought to {grey}Admin Room (button %d). %s", TAG_COLOR, g_ArrayEntity[index], savedPosition ? "{lightgreen}Saved your position." : "");
+	CPrintToChat(client, "%s {lightblue}You have been brought to {grey}Admin Room (button %d). %s", TAG_COLOR, entity, savedPosition ? "{lightgreen}Saved your position." : "");
 	CreateTimer(0.2, Timer_StuckFix, client, TIMER_FLAG_NO_MAPCHANGE);
 	return;
 }
 
-stock void GoBack(int client)
+stock void GetOut(int client)
 {
-	if(playerOrgin[client][0]==0.0 && playerOrgin[client][1]==0.0 && playerOrgin[client][2]==0.0)
+	if(playerOrgin[client][0] == 0.0 && playerOrgin[client][1] == 0.0 && playerOrgin[client][2] == 0.0)
 	{
 		CPrintToChat(client, "%s {red}Could not telport you because your position was not saved.", TAG_COLOR);
 		return;
@@ -320,7 +361,7 @@ stock void GoBack(int client)
 	GetClientAbsOrigin(client, currentPlayerPosition);
 	bool InAdminRoom = false;
 
-	for(int index=1; index < d_MaxIndex; index++)
+	for(int index=1; index < dArraySize; index++)
 	{
 		if(!IsValidEntity(g_ArrayEntity[index])) continue;
 
@@ -337,7 +378,7 @@ stock void GoBack(int client)
 	if(InAdminRoom)
 	{
 		TeleportEntity(client, playerOrgin[client], NULL_VECTOR, NULL_VECTOR);
-		CPrintToChat(client, "%s {orange}You were teleported to the saved position.", TAG_COLOR);
+		CPrintToChat(client, "%s {orange}You have left the admin room.", TAG_COLOR);
 	}
 	else
 	{
