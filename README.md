@@ -39,7 +39,7 @@ The players with the **CHANGEMAP** flag can use the command `!adminroom` to tele
 It works on most maps perfectly.
     
 ## Known issues
-  - ze_fapescape_rote_v1_3 
+  - ze_fapescape_rote_v1_3 
   - ze_shroomforest2_p6 - Works but some buttons do not show up
   - ze_ffvii_mako_reactor_v5_3_v5 (bugged 1.1)
     
