@@ -1,4 +1,4 @@
-## [CS:GO/ANY] Admin Room Finder 1.1
+## [CS:GO/ANY] Admin Room Finder 1.1.1
 The plugin is fully automated and searches for admin rooms without any config file. 
 The players with the **CHANGEMAP** flag can use the command `!adminroom` to teleport to the room and back.
 
@@ -55,6 +55,8 @@ Thanks to Snowy @ GFL for many tests and some bug reports during development.
 ### [Download (smx)](https://github.com/IT-KiLLER/CSGO-Admin-Room-Finder/raw/master/adminroomfinder.smx)    [Source code (zip)](https://github.com/IT-KiLLER/CSGO-Admin-Room-Finder/archive/master.zip)
 
 ## Change log
+- **1.1.1** - 2018-03-18
+  - Solved the problem of getting stuck.
 - **1.1** - 2018-03-10
   - Added sorting
   - Improved algorithm/filter
