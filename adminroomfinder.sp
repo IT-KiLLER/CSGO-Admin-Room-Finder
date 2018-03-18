@@ -43,7 +43,7 @@ public Plugin myinfo =
 	name = "[CS:GO] Admin Room Finder",
 	author = "IT-KILLER",
 	description = "You can easily navigate to the admin room.",
-	version = "1.1",
+	version = "1.1.1",
 	url = "https://github.com/IT-KiLLER"
 };
 
@@ -424,7 +424,7 @@ stock bool CheckIfPlayerIsStuck(int client)
 
 public bool TraceEntityFilterSolid(int entity, int contentsMask) 
 {
-	return entity > 1;
+	return entity > MaxClients;
 }
 
 stock void FixPlayerPosition(int client)
